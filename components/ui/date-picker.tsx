@@ -16,7 +16,7 @@ import {
   ChevronRight,
   Clock,
 } from "lucide-react-native";
-import { useCallback, useMemo, useState } from "react";
+import { ReactElement, useCallback, useMemo, useState } from "react";
 import { TextStyle, TouchableOpacity, ViewStyle } from "react-native";
 
 export interface DateRange {
@@ -37,6 +37,7 @@ interface BaseDatePickerProps {
   variant?: "filled" | "outline" | "group";
   labelStyle?: TextStyle;
   errorStyle?: TextStyle;
+  triggerchildren?: ReactElement;
 }
 
 interface DatePickerPropsRange extends BaseDatePickerProps {
@@ -100,6 +101,7 @@ export function DatePicker(props: DatePickerProps) {
     variant = "filled",
     labelStyle,
     errorStyle,
+    triggerchildren = null,
   } = props;
 
   const mode = props.mode || "date";
@@ -443,7 +445,7 @@ export function DatePicker(props: DatePickerProps) {
           backgroundColor: mutedColor,
         }}
       >
-        <ChevronLeft size={20} color={textColor} />
+        <ChevronLeft size={16} color={textColor} />
       </TouchableOpacity>
 
       <View
@@ -469,7 +471,7 @@ export function DatePicker(props: DatePickerProps) {
             backgroundColor: mutedColor,
           }}
         >
-          <Text variant="subtitle" style={{ marginRight: 4 }}>
+          <Text variant="subtitle" style={{ marginRight: 4, fontSize: 12 }}>
             {MONTHS[calendarData.month]}
           </Text>
           <ChevronDown size={16} color={textColor} />
@@ -488,7 +490,7 @@ export function DatePicker(props: DatePickerProps) {
             backgroundColor: mutedColor,
           }}
         >
-          <Text variant="subtitle" style={{ marginRight: 4 }}>
+          <Text variant="subtitle" style={{ marginRight: 4, fontSize: 12 }}>
             {calendarData.year}
           </Text>
           <ChevronDown size={16} color={textColor} />
@@ -503,7 +505,7 @@ export function DatePicker(props: DatePickerProps) {
           backgroundColor: mutedColor,
         }}
       >
-        <ChevronRight size={20} color={textColor} />
+        <ChevronRight size={16} color={textColor} />
       </TouchableOpacity>
     </View>
   );
@@ -768,7 +770,7 @@ export function DatePicker(props: DatePickerProps) {
                       style={{
                         color: isSelected ? primaryForegroundColor : textColor,
                         fontWeight: isSelected ? "600" : "400",
-                        fontSize: FONT_SIZE,
+                        fontSize: 14,
                       }}
                     >
                       {hour.toString().padStart(2, "0")}
@@ -814,7 +816,7 @@ export function DatePicker(props: DatePickerProps) {
                           ? primaryForegroundColor
                           : textColor,
                       fontWeight: minute === selectedMinutes ? "600" : "400",
-                      fontSize: FONT_SIZE,
+                      fontSize: 14,
                     }}
                   >
                     {minute.toString().padStart(2, "0")}
@@ -917,7 +919,7 @@ export function DatePicker(props: DatePickerProps) {
                     ? primaryForegroundColor
                     : textColor,
                 fontWeight: index === calendarData.month ? "600" : "400",
-                fontSize: FONT_SIZE,
+                fontSize: 16,
               }}
             >
               {month}
@@ -981,18 +983,40 @@ export function DatePicker(props: DatePickerProps) {
   };
 
   const getBottomSheetTitle = () => {
-    if (showMonthPicker) return "Select Month";
-    if (showYearPicker) return "Select Year";
+    const title = showMonthPicker
+      ? "Select Month"
+      : showYearPicker
+      ? "Select Year"
+      : mode === "datetime"
+      ? viewMode === "date"
+        ? "Select Date"
+        : "Select Time"
+      : mode === "time"
+      ? "Select Time"
+      : mode === "range"
+      ? "Select Range"
+      : "Select Date";
 
-    if (mode === "datetime") {
-      return viewMode === "date" ? "Select Date" : "Select Time";
+    // Show back button only if mode is datetime and viewMode is time
+    if (mode === "datetime" && viewMode === "time") {
+      return (
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "flex-start",
+            gap: 8,
+          }}
+        >
+          <TouchableOpacity onPress={() => setViewMode("date")}>
+            <ChevronLeft size={20} />
+          </TouchableOpacity>
+          <Text>{title}</Text>
+        </View>
+      );
     }
 
-    if (mode === "time") return "Select Time";
-
-    if (mode === "range") return "Select Range";
-
-    return "Select Date";
+    return <Text>{title}</Text>;
   };
 
   const handleOpenPicker = () => {
@@ -1018,70 +1042,78 @@ export function DatePicker(props: DatePickerProps) {
   return (
     <>
       <TouchableOpacity
-        style={[triggerStyle, disabled && { opacity: 0.5 }, style]}
+        style={
+          triggerchildren
+            ? undefined
+            : [triggerStyle, disabled && { opacity: 0.5 }, style]
+        }
         onPress={handleOpenPicker}
         disabled={disabled}
       >
-        <View
-          style={{
-            flex: 1,
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 8,
-          }}
-        >
+        {triggerchildren ? (
+          <>{triggerchildren}</>
+        ) : (
           <View
             style={{
-              width: label ? 120 : "auto",
+              flex: 1,
               flexDirection: "row",
               alignItems: "center",
               gap: 8,
             }}
           >
-            {mode === "time" ? (
-              <Icon name={Clock} size={20} strokeWidth={1} />
-            ) : mode === "datetime" ? (
-              <Icon name={CalendarClock} size={20} strokeWidth={1} />
-            ) : mode === "range" ? (
-              <Icon name={CalendarRange} size={20} strokeWidth={1} />
-            ) : (
-              <Icon name={Calendar} size={20} strokeWidth={1} />
-            )}
-
-            {/* Label takes 1/3 of available width when present */}
-            {label && (
-              <View style={{ flex: 1 }}>
-                <Text
-                  variant="caption"
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                  style={[
-                    {
-                      color: error ? errorColor : textMutedColor,
-                    },
-                    labelStyle,
-                  ]}
-                >
-                  {label}
-                </Text>
-              </View>
-            )}
-          </View>
-
-          {/* Text takes 2/3 of available width when label is present, or full width when no label */}
-          <View style={{ flex: 1 }}>
-            <Text
-              numberOfLines={1}
-              ellipsizeMode="tail"
+            <View
               style={{
-                color: value ? textColor : textMutedColor,
-                fontSize: FONT_SIZE,
+                width: label ? 120 : "auto",
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 8,
               }}
             >
-              {formatDisplayValue()}
-            </Text>
+              {mode === "time" ? (
+                <Icon name={Clock} size={20} strokeWidth={1} />
+              ) : mode === "datetime" ? (
+                <Icon name={CalendarClock} size={20} strokeWidth={1} />
+              ) : mode === "range" ? (
+                <Icon name={CalendarRange} size={20} strokeWidth={1} />
+              ) : (
+                <Icon name={Calendar} size={20} strokeWidth={1} />
+              )}
+
+              {/* Label takes 1/3 of available width when present */}
+              {label && (
+                <View style={{ flex: 1 }}>
+                  <Text
+                    variant="caption"
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                    style={[
+                      {
+                        color: error ? errorColor : textMutedColor,
+                      },
+                      labelStyle,
+                    ]}
+                  >
+                    {label}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {/* Text takes 2/3 of available width when label is present, or full width when no label */}
+            <View style={{ flex: 1 }}>
+              <Text
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={{
+                  color: value ? textColor : textMutedColor,
+                  fontSize: FONT_SIZE,
+                }}
+              >
+                {formatDisplayValue()}
+              </Text>
+            </View>
           </View>
-        </View>
+        )}
       </TouchableOpacity>
 
       <BottomSheet
@@ -1093,7 +1125,12 @@ export function DatePicker(props: DatePickerProps) {
         }}
         title={getBottomSheetTitle()}
         snapPoints={[0.7]}
-        disablePanGesture={showMonthPicker || showYearPicker}
+        disablePanGesture={
+          showMonthPicker ||
+          showYearPicker ||
+          mode === "time" ||
+          (mode === "datetime" && viewMode === "time")
+        }
       >
         <View style={{ flex: 1 }}>
           {getBottomSheetContent()}
@@ -1113,11 +1150,16 @@ export function DatePicker(props: DatePickerProps) {
                 gap: 8,
               }}
             >
-              <Button variant="outline" onPress={resetToToday}>
+              <Button
+                style={{}}
+                textStyle={{ fontSize: 12 }}
+                variant="outline"
+                onPress={resetToToday}
+              >
                 Today
               </Button>
-
               <Button
+                textStyle={{ fontSize: 12 }}
                 variant="outline"
                 onPress={() => {
                   close();
@@ -1131,11 +1173,18 @@ export function DatePicker(props: DatePickerProps) {
             </View>
 
             {mode === "datetime" && viewMode === "date" ? (
-              <Button onPress={() => setViewMode("time")} style={{ flex: 1 }}>
+              <Button
+                onPress={() => setViewMode("time")}
+                style={{ flex: 1, padding: 10 }}
+              >
                 Next
               </Button>
             ) : (
-              <Button onPress={handleConfirm} style={{ flex: 1 }}>
+              <Button
+                textStyle={{ fontSize: 12 }}
+                onPress={handleConfirm}
+                style={{ flex: 1, padding: 2 }}
+              >
                 Done
               </Button>
             )}
